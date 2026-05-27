@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	goerrors "errors"
 	"monica-proxy/internal/config"
 	"monica-proxy/internal/errors"
 	"monica-proxy/internal/logger"
@@ -75,6 +76,11 @@ func (s *chatService) HandleChatCompletion(ctx context.Context, req *openai.Chat
 	response, err := monica.CollectMonicaSSEToCompletion(req.Model, stream.RawBody())
 	if err != nil {
 		logger.Error("处理Monica响应失败", zap.Error(err))
+		// Monica 流内返回的业务错误（如模型下线），把原始信息透出给调用方
+		var sseErr *monica.SSEError
+		if goerrors.As(err, &sseErr) {
+			return nil, errors.NewBadRequestError(sseErr.Msg, err)
+		}
 		return nil, errors.NewInternalError(err)
 	}
 

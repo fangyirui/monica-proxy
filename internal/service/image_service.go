@@ -36,10 +36,7 @@ func (s *imageService) GenerateImage(ctx context.Context, req *types.ImageGenera
 		return nil, errors.NewInvalidInputError("提示词不能为空", nil)
 	}
 
-	// 设置默认值
-	if req.Model == "" {
-		req.Model = "dall-e-3"
-	}
+	// 设置默认值（model 为空时不强制改写，交给 draw 层默认到免费的 sdxl）
 	if req.N <= 0 {
 		req.N = 1
 	}

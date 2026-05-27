@@ -35,6 +35,17 @@ type SSEData struct {
 	Text        string      `json:"text"`
 	Finished    bool        `json:"finished"`
 	AgentStatus AgentStatus `json:"agent_status,omitempty"`
+	Error       *SSEError   `json:"error,omitempty"`
+}
+
+// SSEError Monica 在流中返回的错误（如模型下线、内部错误等）
+type SSEError struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+func (e *SSEError) Error() string {
+	return fmt.Sprintf("monica error %d: %s", e.Code, e.Msg)
 }
 
 type AgentStatus struct {
@@ -160,6 +171,10 @@ func CollectMonicaSSEToCompletion(model string, r io.Reader) (*openai.ChatComple
 
 	// 处理SSE数据
 	err := processor.processSSEStream(func(sseData *SSEData) error {
+		// Monica 在流中返回错误（如模型下线），直接上抛
+		if sseData.Error != nil {
+			return sseData.Error
+		}
 		// 如果是 agent_status，跳过
 		if sseData.AgentStatus.Type != "" {
 			return nil
@@ -243,6 +258,26 @@ func StreamMonicaSSEToClient(model string, w io.Writer, r io.Reader) error {
 	return processor.processSSEStream(func(sseData *SSEData) error {
 		var sseMsg types.ChatCompletionStreamResponse
 		switch {
+		case sseData.Error != nil:
+			// 头部已发送，无法改状态码，把错误信息作为内容下发，让调用方可见
+			sseMsg = types.ChatCompletionStreamResponse{
+				ID:                "chatcmpl-" + chatId,
+				Object:            sseObject,
+				SystemFingerprint: fingerprint,
+				Created:           now,
+				Model:             model,
+				Choices: []types.ChatCompletionStreamChoice{
+					{
+						Index: 0,
+						Delta: openai.ChatCompletionStreamChoiceDelta{
+							Role:    openai.ChatMessageRoleAssistant,
+							Content: fmt.Sprintf("[Monica Error %d] %s", sseData.Error.Code, sseData.Error.Msg),
+						},
+						FinishReason: openai.FinishReasonStop,
+					},
+				},
+			}
+			sseData.Finished = true // 复用下方 finished 逻辑发送 [DONE] 并结束
 		case sseData.Finished:
 			sseMsg = types.ChatCompletionStreamResponse{
 				ID:      "chatcmpl-" + chatId,

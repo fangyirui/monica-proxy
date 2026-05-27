@@ -12,12 +12,34 @@ import (
 	"github.com/google/uuid"
 )
 
+// imageModelToType 把请求里的 model 映射到 Monica image_tools 的 model_type。
+// 免费可用：sdxl / sd3 / nano_banana / gpt-image-1；付费(需额度)：dalle3 / flux 等。
+var imageModelToType = map[string]string{
+	"dall-e-3":    "dalle3",
+	"dalle3":      "dalle3",
+	"sdxl":        "sdxl",
+	"sd3":         "sd3",
+	"nano-banana": "nano_banana",
+	"nano_banana": "nano_banana",
+	"gpt-image-1": "gpt-image-1",
+	"gpt-image":   "gpt-image-1",
+	"flux":        "flux",
+}
+
+// resolveImageModelType 解析绘图模型类型：空 -> sdxl(免费默认)；已知名 -> 映射；未知 -> 原样透传给 Monica。
+func resolveImageModelType(model string) string {
+	if model == "" {
+		return "sdxl"
+	}
+	if mt, ok := imageModelToType[model]; ok {
+		return mt
+	}
+	return model
+}
+
 // GenerateImage 使用 Monica 的文生图 API 生成图片
 func GenerateImage(ctx context.Context, cfg *config.Config, req *types.ImageGenerationRequest) (*types.ImageGenerationResponse, error) {
 	// 1. 参数验证和默认值设置
-	if req.Model == "" {
-		req.Model = "dall-e-3" // 默认使用 dall-e-3
-	}
 	if req.N <= 0 {
 		req.N = 1 // 默认生成1张图片
 	}
@@ -33,7 +55,7 @@ func GenerateImage(ctx context.Context, cfg *config.Config, req *types.ImageGene
 		TaskUID:     uuid.New().String(),
 		ImageCount:  req.N,
 		Prompt:      req.Prompt,
-		ModelType:   "sdxl", // Monica 目前只支持 sdxl
+		ModelType:   resolveImageModelType(req.Model),
 		AspectRatio: aspectRatio,
 		TaskType:    "text_to_image",
 	}

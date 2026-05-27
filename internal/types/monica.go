@@ -130,7 +130,7 @@ type MonicaImageRequest struct {
 	TaskUID     string `json:"task_uid"`     // 任务ID
 	ImageCount  int    `json:"image_count"`  // 生成图片数量
 	Prompt      string `json:"prompt"`       // 提示词
-	ModelType   string `json:"model_type"`   // 模型类型，目前只支持 sdxl
+	ModelType   string `json:"model_type"`   // 模型类型：sdxl/sd3/nano_banana/gpt-image-1/dalle3/flux 等
 	AspectRatio string `json:"aspect_ratio"` // 宽高比，如 1:1, 16:9, 9:16
 	TaskType    string `json:"task_type"`    // 任务类型，固定为 text_to_image
 }
@@ -211,51 +211,38 @@ type OpenAIModelList struct {
 	Data   []OpenAIModel `json:"data"`
 }
 
+// modelToBotMap 仅保留 Monica 当前实际可用的模型。已下线/报错的模型已移除，
+// 列表对照网页端 bot 列表维护；如需新增，确认其 bot_uid(网页端的 uid 字段)后再加入。
 var modelToBotMap = map[string]string{
 	// OpenAI 系列
-	"gpt-5":        "gpt_5",
-	"gpt-4o":       "gpt_4_o_chat",
-	"gpt-4o-mini":  "gpt_4_o_mini_chat",
-	"gpt-4.1":      "gpt_4_1",
-	"gpt-4.1-mini": "gpt_4_1_mini",
-	"gpt-4.1-nano": "gpt_4_1_nano",
-	"gpt-4-5":      "gpt_4_5_chat",
-	"o3":           "o3",
-	"o3-mini":      "openai_o_3_mini",
-	"o4-mini":      "o4_mini",
+	"gpt-5.5":       "gpt_5_5",
+	"gpt-5.4":       "gpt_5_4",
+	"gpt-5.4-pro":   "gpt_5_4_pro",
+	"gpt-5.4-mini":  "gpt_5_4_mini",
+	"gpt-5.4-nano":  "gpt_5_4_nano",
+	"gpt-5.3":       "gpt_5_3",
+	"gpt-5.3-codex": "gpt_5_3_codex",
+	"gpt-4o":        "gpt_4_o_chat",
+	"gpt-4.1-nano":  "gpt_4_1_nano",
+	"o3":            "o3",
 
 	// Claude 系列
-	"claude-haiku-4-5":                  "claude_4_5_haiku",
-	"claude-sonnet-4-5":                 "claude_4_5_sonnet",
-	"claude-4-sonnet":                   "claude_4_sonnet",
-	"claude-4-sonnet-thinking":          "claude_4_sonnet_think",
-	"claude-4-opus":                     "claude_4_opus",
-	"claude-4-opus-thinking":            "claude_4_opus_think",
-	"claude-opus-4-1-20250805-thinking": "claude_4_1_opus_think",
-	"claude-3-7-sonnet-thinking":        "claude_3_7_sonnet_think",
-	"claude-3-7-sonnet":                 "claude_3_7_sonnet",
-	"claude-3-5-haiku":                  "claude_3.5_haiku",
+	"claude-opus-4-7":   "claude_4_7_opus",
+	"claude-opus-4-6":   "claude_4_6_opus",
+	"claude-opus-4-5":   "claude_4_5_opus",
+	"claude-sonnet-4-6": "claude_4_6_sonnet",
+	"claude-sonnet-4-5": "claude_4_5_sonnet",
+	"claude-haiku-4-5":  "claude_4_5_haiku",
 
 	// Gemini 系列
-	"gemini-3-pro-preview-thinking": "gemini_3_pro_preview_think",
-	"gemini-2.5-pro":                "gemini_2_5_pro",
-	"gemini-2.5-flash":              "gemini_2_5_flash",
-	"gemini-2.0-flash":              "gemini_2_0",
-
-	// DeepSeek 系列
-	"deepseek-v3.1":     "deepseek_v3_1",
-	"deepseek-reasoner": "deepseek_reasoner",
-	"deepseek-chat":     "deepseek_chat",
-	"deepclaude":        "deepclaude",
-
-	// Perplexity 系列
-	"sonar":               "sonar",
-	"sonar-reasoning-pro": "sonar_reasoning_pro",
+	"gemini-3.5-flash":      "gemini_3_5_flash",
+	"gemini-3.1-pro":        "gemini_3_1_pro_preview_think",
+	"gemini-3.1-flash-lite": "gemini_3_1_flash_lite",
+	"gemini-3-flash":        "gemini_3_flash",
 
 	// Grok 系列
-	"grok-3-beta":      "grok_3_beta",
-	"grok-4":           "grok_4",
-	"grok-code-fast-1": "grok_code_fast_1",
+	"grok-4-3": "grok_4_3",
+	"grok-4-2": "grok_4_2",
 }
 
 func modelToBot(model string) string {
@@ -468,8 +455,9 @@ func ChatGPTToMonica(cfg *config.Config, chatReq openai.ChatCompletionRequest) (
 			PreParentItemID: preItemID,
 			TriggerBy:       "auto",
 			IsIncognito:     true,
-			UseModel:        chatReq.Model, //TODO 好像写啥都没影响
-			UseNewMemory:    false,
+			// 不要透传 use_model：bot_uid 已决定模型，传入 OpenAI 风格名（如 gemini-3.1-pro）
+			// 与 Monica 真实模型串不一致时会触发服务端报错并返回空内容
+			UseNewMemory: false,
 		},
 		Language: "auto",
 		TaskType: "chat",

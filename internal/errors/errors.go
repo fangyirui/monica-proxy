@@ -108,9 +108,13 @@ func NewEmptyMessageError() *AppError {
 
 // NewImageGenerationError 创建图片生成错误
 func NewImageGenerationError(err error) *AppError {
+	message := "图片生成失败"
+	if err != nil {
+		message = "图片生成失败: " + err.Error()
+	}
 	return &AppError{
 		Code:    ErrImageGeneration,
-		Message: "图片生成失败",
+		Message: message,
 		Err:     err,
 		Status:  http.StatusInternalServerError,
 	}
