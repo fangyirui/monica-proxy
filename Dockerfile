@@ -18,6 +18,6 @@ FROM gcr.io/distroless/static:nonroot AS final
 WORKDIR /data
 COPY --from=builder /app/build/monica /data/monica
 
-EXPOSE 8080
+EXPOSE 8081
 USER nonroot:nonroot
 CMD ["./monica"]
