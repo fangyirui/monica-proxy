@@ -1,7 +1,3 @@
-# 十分抱歉，由于某些原因，将停止维护本项目
-
----
-
 # Monica Proxy
 
 <div align="center">
@@ -27,7 +23,8 @@
 ```bash
 docker run -d \
   --name monica-proxy \
-  -p 8080:8080 \
+  -p 8081:8081 \
+  -e SERVER_PORT=8081 \
   -e MONICA_COOKIE="your_monica_cookie" \
   -e BEARER_TOKEN="your_bearer_token" \
   neccen/monica-proxy:latest
@@ -37,7 +34,7 @@ docker run -d \
 
 ```bash
 curl -H "Authorization: Bearer your_bearer_token" \
-     http://localhost:8080/v1/models
+     http://localhost:8081/v1/models
 ```
 
 ## ✨ **功能特性**
@@ -63,10 +60,11 @@ services:
     container_name: monica-proxy
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - MONICA_COOKIE=${MONICA_COOKIE}
       - BEARER_TOKEN=${BEARER_TOKEN}
+      - SERVER_PORT=8081
       - RATE_LIMIT_RPS=100          # 启用限流：每秒100请求
       # Custom Bot模式配置（可选）
       # - ENABLE_CUSTOM_BOT_MODE=true
@@ -156,7 +154,7 @@ Authorization: Bearer YOUR_BEARER_TOKEN
 ### 聊天API示例
 
 ```bash
-curl -X POST http://localhost:8080/v1/chat/completions \
+curl -X POST http://localhost:8081/v1/chat/completions \
   -H "Authorization: Bearer your_token" \
   -H "Content-Type: application/json" \
   -d '{
@@ -193,7 +191,7 @@ export BOT_UID="your-bot-uid"  # 必需
 ⬇️ 启动项目后 ⬇️
 
 # 现在所有 /v1/chat/completions 请求都支持 system prompt
-curl -X POST http://localhost:8080/v1/chat/completions \
+curl -X POST http://localhost:8081/v1/chat/completions \
   -H "Authorization: Bearer your_token" \
   -H "Content-Type: application/json" \
   -d '{
@@ -225,7 +223,7 @@ export RATE_LIMIT_RPS=50
 docker-compose restart monica-proxy
 
 # 测试限流效果
-for i in {1..100}; do curl -H "Authorization: Bearer token" http://localhost:8080/v1/models & done
+for i in {1..100}; do curl -H "Authorization: Bearer token" http://localhost:8081/v1/models & done
 ```
 
 ## 📈 **监控和运维**
@@ -248,11 +246,11 @@ docker-compose logs monica-proxy | jq .
 ```bash
 # 测试API可用性
 curl -H "Authorization: Bearer your_token" \
-     http://localhost:8080/v1/models
+     http://localhost:8081/v1/models
 
 # 测试限流状态（查看HTTP响应头）
 curl -I -H "Authorization: Bearer your_token" \
-     http://localhost:8080/v1/models
+     http://localhost:8081/v1/models
 ```
 
 ### 基础监控
@@ -264,7 +262,7 @@ docker stats monica-proxy
 # 简单的API压力测试
 for i in {1..10}; do
   curl -s -H "Authorization: Bearer your_token" \
-       http://localhost:8080/v1/models > /dev/null && echo "OK" || echo "FAIL"
+       http://localhost:8081/v1/models > /dev/null && echo "OK" || echo "FAIL"
 done
 ```
 
@@ -285,15 +283,9 @@ done
    docker-compose restart monica-proxy
    ```
 
-## 🤝 **贡献指南**
+## 🤝 **特别感谢**
 
-欢迎提交Issue和Pull Request！
-
-1. Fork本项目
-2. 创建特性分支：`git checkout -b feature/amazing-feature`
-3. 提交更改：`git commit -m 'Add amazing feature'`
-4. 推送分支：`git push origin feature/amazing-feature`
-5. 提交Pull Request
+感谢原本项目：https://github.com/ycvk/monica-proxy
 
 ## 📄 **许可证**
 
